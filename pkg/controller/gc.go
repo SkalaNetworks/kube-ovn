@@ -376,7 +376,18 @@ func (c *Controller) markAndCleanLSP() error {
 	vipsMap := strset.NewWithSize(len(vips))
 	for _, vip := range vips {
 		if vip.Spec.Type != "" {
-			portName := ovs.PodNameToPortName(vip.Name, vip.Spec.Namespace, util.OvnProvider)
+			subnetName := vip.Spec.Subnet
+			if subnetName == "" {
+				return fmt.Errorf("failed to gc vip '%s', subnet should be set", vip.Name)
+			}
+
+			subnet, err := c.subnetsLister.Get(subnetName)
+			if err != nil {
+				klog.Errorf("failed to get subnet %s: %v", subnetName, err)
+				return err
+			}
+
+			portName := ovs.PodNameToPortName(vip.Name, vip.Spec.Namespace, subnet.Spec.Provider)
 			vipsMap.Add(portName)
 		}
 	}
